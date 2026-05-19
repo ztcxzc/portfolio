@@ -255,7 +255,12 @@ export default function App() {
       },
       { threshold: 0.06, rootMargin: '0px 0px -32px 0px' }
     );
-    items.forEach((el) => observer.observe(el));
+    items.forEach((el) => {
+      // Once the entrance animation finishes, lock opacity:1 permanently
+      // so toggling is-open can never restart the animation and flash opacity:0
+      el.addEventListener('animationend', () => el.classList.add('has-animated'), { once: true });
+      observer.observe(el);
+    });
     return () => observer.disconnect();
   }, [visibleProjects]);
 
