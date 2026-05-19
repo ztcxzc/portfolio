@@ -377,16 +377,6 @@ ol, ul { list-style: none; margin: 0; padding: 0; }
 .project-row.is-open {
   background: var(--bg-card);
   border-left-color: var(--accent);
-  /* Prevent the row-in animation from restarting when is-open is toggled */
-  animation: none;
-  opacity: 1;
-}
-
-/* After the entrance animation completes, permanently lock opacity:1
-   so toggling is-open can never re-trigger the animation from opacity:0 */
-.project-row.has-animated {
-  opacity: 1;
-  animation: none;
 }
 
 /* Row trigger button (main clickable area) */

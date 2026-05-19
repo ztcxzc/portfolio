@@ -212,6 +212,7 @@ function ProjectPreview({ project }) {
 export default function App() {
   const [filter, setFilter] = useState('all');
   const [openId, setOpenId] = useState(null);
+  const [visibleIds, setVisibleIds] = useState(new Set());
   const listRef = useRef(null);
 
   const visibleProjects = useMemo(
@@ -233,6 +234,7 @@ export default function App() {
     (id) => {
       setFilter(id);
       setOpenId(null);
+      setVisibleIds(new Set()); // reset so entrance animation replays on new filter
     },
     []
   );
@@ -243,24 +245,20 @@ export default function App() {
 
   useEffect(() => {
     if (!listRef.current) return;
-    const items = listRef.current.querySelectorAll('.project-row');
+    const items = listRef.current.querySelectorAll('[data-project-id]');
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
-            e.target.classList.add('is-visible');
+            const id = e.target.dataset.projectId;
+            setVisibleIds((prev) => new Set([...prev, id]));
             observer.unobserve(e.target);
           }
         });
       },
       { threshold: 0.06, rootMargin: '0px 0px -32px 0px' }
     );
-    items.forEach((el) => {
-      // Once the entrance animation finishes, lock opacity:1 permanently
-      // so toggling is-open can never restart the animation and flash opacity:0
-      el.addEventListener('animationend', () => el.classList.add('has-animated'), { once: true });
-      observer.observe(el);
-    });
+    items.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, [visibleProjects]);
 
@@ -342,10 +340,12 @@ export default function App() {
           <ol className="project-list" ref={listRef} key={filter}>
             {visibleProjects.map((project, i) => {
               const isOpen = openId === project.id;
+              const isVisible = visibleIds.has(String(project.id));
               return (
                 <li
                   key={project.id}
-                  className={`project-row${isOpen ? ' is-open' : ''}`}
+                  data-project-id={project.id}
+                  className={`project-row${isVisible ? ' is-visible' : ''}${isOpen ? ' is-open' : ''}`}
                   style={{ '--i': i }}
                 >
                   <button
