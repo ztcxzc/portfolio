@@ -1,12 +1,12 @@
 {
-  "name": "adb-device-monitor",
+  "name": "portfolio-showcase",
   "version": "1.0.0",
-  "description": "Real-time ADB device monitor with screen mirroring",
+  "description": "Preview-first portfolio showcase for websites, mobile apps, and Mac apps",
   "main": "electron/main.js",
   "scripts": {
+    "start": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "start": "npm run build && electron .",
-    "dev": "concurrently -k \"webpack --watch --mode development\" \"wait-on public/dist/bundle.js && electron .\"",
+    "electron": "npm run build && electron .",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder"
   },
@@ -22,7 +22,8 @@
     "style-loader": "^3.3.4",
     "wait-on": "^7.2.0",
     "webpack": "^5.90.1",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.4"
   },
   "dependencies": {
     "ffmpeg-static": "^5.3.0",
@@ -30,26 +31,20 @@
     "react-dom": "^18.2.0"
   },
   "build": {
-    "appId": "com.adb.devicemonitor",
-    "productName": "ADB Device Monitor",
+    "appId": "com.portfolio.showcase",
+    "productName": "Portfolio Manager",
     "mac": {
-      "target": "dmg",
-      "category": "public.app-category.developer-tools"
-    },
-    "linux": {
-      "target": "AppImage"
-    },
-    "win": {
-      "target": "nsis"
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "category": "public.app-category.productivity"
     },
     "files": [
       "electron/**/*",
-      "public/**/*",
+      "public/dist/**/*",
+      "public/manager.html",
       "node_modules/**/*"
     ],
-    "asarUnpack": [
-      "node_modules/ffmpeg-static/**",
-      "electron/adb/mjpeg_bridge.py"
+    "extraResources": [
+      { "from": "src/data/projects.json", "to": "projects.json" }
     ]
   }
 }
