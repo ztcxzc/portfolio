@@ -89,6 +89,80 @@ function CheckIcon() {
   );
 }
 
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13V3M6 7l4-4 4 4" />
+      <path d="M3 14v1a2 2 0 002 2h10a2 2 0 002-2v-1" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="2.5" />
+      <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" />
+    </svg>
+  );
+}
+
+/* ── Settings Modal ──────────────────────────────────── */
+function SettingsModal({ onClose, onSaved }) {
+  const [token, setToken] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!token.trim()) return;
+    setSaving(true);
+    await window.portfolioAPI.setToken(token.trim());
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
+          <h2 className="modal__title">GitHub Settings</h2>
+          <button className="modal__close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="modal__body">
+          <p className="modal__desc">
+            Enter a GitHub Personal Access Token with <strong>repo</strong> scope to publish directly to <code>ztcxzc/portfolio</code>.
+          </p>
+          <ol className="modal__steps">
+            <li>Go to <strong>github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</strong></li>
+            <li>Click <strong>Generate new token</strong>, tick <strong>repo</strong> scope</li>
+            <li>Copy and paste it below</li>
+          </ol>
+          <div className="field" style={{ marginTop: 16 }}>
+            <label className="field__label">Personal Access Token</label>
+            <input
+              className="field__input"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              autoFocus
+            />
+          </div>
+        </div>
+        <div className="modal__footer">
+          <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
+          <button
+            className={`btn btn--primary${saving ? ' btn--loading' : ''}`}
+            onClick={handleSave}
+            disabled={saving || !token.trim()}
+          >
+            {saving ? 'Saving…' : 'Save Token'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Toast ──────────────────────────────────────────── */
 function Toast({ toast }) {
   if (!toast) return null;
@@ -102,9 +176,12 @@ export default function ManagerApp() {
   const [form, setForm] = useState(EMPTY_PROJECT);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [toast, setToast] = useState(null);
   const [dataPath, setDataPath] = useState('');
   const [isNew, setIsNew] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
   const toastTimer = useRef(null);
 
   const showToast = useCallback((type, message) => {
@@ -118,6 +195,7 @@ export default function ManagerApp() {
     if (!window.portfolioAPI) return;
     window.portfolioAPI.getProjects().then(setProjects);
     window.portfolioAPI.getDataPath().then(setDataPath);
+    window.portfolioAPI.getToken().then((t) => setHasToken(!!t));
   }, []);
 
   /* Populate form when selection changes */
@@ -202,6 +280,26 @@ export default function ManagerApp() {
     if (result.success) showToast('success', `Exported → ${result.filePath.split('/').pop()}`);
   }, [showToast]);
 
+  const handlePublish = useCallback(async () => {
+    if (!hasToken) {
+      setSettingsOpen(true);
+      return;
+    }
+    setPublishing(true);
+    try {
+      const result = await window.portfolioAPI.publishToGitHub();
+      if (result.success) {
+        showToast('success', 'Published! Render will redeploy in ~2 min.');
+      } else {
+        showToast('error', result.error || 'Publish failed');
+      }
+    } catch (err) {
+      showToast('error', err.message || 'Network error');
+    } finally {
+      setPublishing(false);
+    }
+  }, [hasToken, showToast]);
+
   const grouped = {
     website: projects.filter((p) => p.type === 'website'),
     mobile:  projects.filter((p) => p.type === 'mobile'),
@@ -215,13 +313,29 @@ export default function ManagerApp() {
     <div className="app">
       <Toast toast={toast} />
 
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onSaved={() => {
+            setHasToken(true);
+            setSettingsOpen(false);
+            showToast('success', 'Token saved — ready to publish');
+          }}
+        />
+      )}
+
       {/* ── Sidebar ─────────────────────────────── */}
       <aside className="sidebar">
         <div className="sidebar__header">
           <h1 className="sidebar__title">Projects</h1>
-          <button className="sidebar__add-btn" onClick={handleNewProject} title="New project" aria-label="Add project">
-            <PlusIcon />
-          </button>
+          <div className="sidebar__header-actions">
+            <button className="sidebar__icon-btn" onClick={() => setSettingsOpen(true)} title="GitHub settings" aria-label="Settings">
+              <GearIcon />
+            </button>
+            <button className="sidebar__add-btn" onClick={handleNewProject} title="New project" aria-label="Add project">
+              <PlusIcon />
+            </button>
+          </div>
         </div>
 
         <div className="sidebar__list">
@@ -259,9 +373,20 @@ export default function ManagerApp() {
         {shortPath && (
           <div className="sidebar__footer">
             <span className="sidebar__footer-path">{shortPath}</span>
-            <button className="sidebar__export-btn" onClick={handleExport} title="Export projects.json to a custom location">
-              Export JSON
-            </button>
+            <div className="sidebar__footer-actions">
+              <button className="sidebar__export-btn" onClick={handleExport} title="Export projects.json to a custom location">
+                Export
+              </button>
+              <button
+                className={`sidebar__publish-btn${publishing ? ' btn--loading' : ''}${!hasToken ? ' sidebar__publish-btn--warn' : ''}`}
+                onClick={handlePublish}
+                disabled={publishing}
+                title={hasToken ? 'Push all projects to ztcxzc/portfolio → triggers Render redeploy' : 'Set GitHub token first'}
+              >
+                <UploadIcon />
+                {publishing ? 'Publishing…' : 'Publish'}
+              </button>
+            </div>
           </div>
         )}
       </aside>
