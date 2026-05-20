@@ -14,7 +14,7 @@ function resolveDataPath() {
     }
     return dest;
   }
-  return path.join(__dirname, '../src/data/projects.json');
+  return path.join(__dirname, '../public/data/projects.json');
 }
 
 /* ── GitHub token storage (encrypted via OS keychain) ── */
@@ -129,7 +129,7 @@ function register() {
     // 1. Get current SHA so GitHub lets us overwrite the file
     const getRes = await githubRequest(
       'GET',
-      '/repos/ztcxzc/portfolio/contents/src/data/projects.json',
+      '/repos/ztcxzc/portfolio/contents/public/data/projects.json',
       token,
       null
     );
@@ -142,7 +142,7 @@ function register() {
     // 2. Push updated file
     const putRes = await githubRequest(
       'PUT',
-      '/repos/ztcxzc/portfolio/contents/src/data/projects.json',
+      '/repos/ztcxzc/portfolio/contents/public/data/projects.json',
       token,
       {
         message: `Update projects via Portfolio Manager (${new Date().toISOString().slice(0, 10)})`,

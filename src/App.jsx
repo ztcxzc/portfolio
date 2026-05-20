@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import PROJECTS_DATA from './data/projects.json';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -23,7 +22,6 @@ const PLATFORM_COPY = {
   },
 };
 
-const PROJECTS = PROJECTS_DATA;
 
 
 function ArrowIcon() {
@@ -213,11 +211,19 @@ export default function App() {
   const [filter, setFilter] = useState('all');
   const [openId, setOpenId] = useState(null);
   const [visibleIds, setVisibleIds] = useState(new Set());
+  const [projects, setProjects] = useState([]);
   const listRef = useRef(null);
 
+  useEffect(() => {
+    fetch('/data/projects.json?t=' + Date.now())
+      .then((r) => r.json())
+      .then(setProjects)
+      .catch(() => {});
+  }, []);
+
   const visibleProjects = useMemo(
-    () => (filter === 'all' ? PROJECTS : PROJECTS.filter((p) => p.type === filter)),
-    [filter]
+    () => (filter === 'all' ? projects : projects.filter((p) => p.type === filter)),
+    [filter, projects]
   );
 
   const platformCards = useMemo(
@@ -225,9 +231,9 @@ export default function App() {
       Object.entries(PLATFORM_COPY).map(([id, details]) => ({
         id,
         ...details,
-        count: PROJECTS.filter((p) => p.type === id).length,
+        count: projects.filter((p) => p.type === id).length,
       })),
-    []
+    [projects]
   );
 
   const handleFilterChange = useCallback(
